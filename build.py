@@ -13,6 +13,7 @@ NAME = "أبو محمد سباك وكهربائي"
 PHONE = "0576879421"
 E164 = "+966576879421"
 WA = "https://wa.me/966576879421"
+GOOGLE_SITE_VERIFICATION = "KroRbLNToQQ_EEKCW_vcDeheVi0wmUlSOi8uiAHqGAU"
 
 SERVICES = [
     dict(slug="leak-repair", category="plumbing", icon="drop", title="كشف وإصلاح تسربات المياه", short="تتبّع مصدر التهريب ومعالجة المواسير والوصلات والمحابس وفق حالة الموقع.",
@@ -128,12 +129,13 @@ def business_schema():
 
 def head(title, description, path, extra_schema=None):
     url=canonical(path)
+    verification_tag = f'<meta name="google-site-verification" content="{esc(GOOGLE_SITE_VERIFICATION)}">' if path == "/" else ""
     graph=[{"@type":"WebSite","@id":SITE+"/#website","name":NAME,"url":SITE+"/","inLanguage":"ar-SA","publisher":{"@id":SITE+"/#business"}},
            {"@type":"WebPage","@id":url+"#webpage","url":url,"name":title,"description":description,"inLanguage":"ar-SA","isPartOf":{"@id":SITE+"/#website"},"about":{"@id":SITE+"/#business"}}]
     if path=="/": graph.insert(0,business_schema())
     if extra_schema: graph.extend(extra_schema if isinstance(extra_schema,list) else [extra_schema])
     return f'''<!doctype html><html lang="ar" dir="rtl"><head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#10282b"><meta name="color-scheme" content="light">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#10282b"><meta name="color-scheme" content="light">{verification_tag}
 <title>{esc(title)}</title><meta name="description" content="{esc(description)}"><meta name="robots" content="index,follow,max-image-preview:large">
 <link rel="canonical" href="{esc(url)}"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png"><link rel="apple-touch-icon" href="/assets/icon-180.png">
 <meta property="og:type" content="website"><meta property="og:locale" content="ar_SA"><meta property="og:site_name" content="{NAME}"><meta property="og:title" content="{esc(title)}"><meta property="og:description" content="{esc(description)}"><meta property="og:url" content="{esc(url)}"><meta property="og:image" content="{SITE}/assets/og.jpg"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">

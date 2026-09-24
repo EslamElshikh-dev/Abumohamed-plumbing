@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://abu-mohamed-plumbing.vercel.app/sitemap.xml

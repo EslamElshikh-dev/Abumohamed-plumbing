@@ -16,7 +16,12 @@ E164 = "+966576879421"
 WA = "https://wa.me/966576879421"
 GOOGLE_SITE_VERIFICATION = "KroRbLNToQQ_EEKCW_vcDeheVi0wmUlSOi8uiAHqGAU"
 BASE_AREA = "حي المصيف، الرياض"
+STREET_ADDRESS = "3754 الجنيفي، حي المصيف"
+ADDITIONAL_NUMBER = "6561"
+POSTAL_CODE = "12465"
+SHORT_ADDRESS = "RHYB3754"
 CITY = "الرياض"
+MAPS_URL = "https://maps.app.goo.gl/WGDpANzTccuiyuP17?g_st=ac"
 SERVICE_MODE = "ننتقل إلى مواقع العملاء داخل الرياض لتنفيذ الخدمة. مقر إدارة النشاط لا يستقبل العملاء."
 LAST_UPDATED = "2026-10-12"
 
@@ -150,10 +155,14 @@ def business_schema():
         "description": "خدمات السباكة والكهرباء والإنارة في مواقع العملاء داخل الرياض، بإدارة من حي المصيف. " + SERVICE_MODE,
         "address": {
             "@type": "PostalAddress",
+            "streetAddress": f"{STREET_ADDRESS}، الرقم الإضافي {ADDITIONAL_NUMBER}",
             "addressLocality": CITY,
             "addressRegion": "منطقة الرياض",
+            "postalCode": POSTAL_CODE,
             "addressCountry": "SA",
         },
+        "identifier": {"@type": "PropertyValue", "name": "العنوان الوطني المختصر لمقر إدارة النشاط", "value": SHORT_ADDRESS},
+        "hasMap": MAPS_URL,
         "areaServed": service_area_schema(),
         "contactPoint": {
             "@type": "ContactPoint", "telephone": E164,
@@ -178,13 +187,13 @@ def business_schema():
 def business_details():
     return f'''<section class="business-details" id="business-details" aria-labelledby="business-details-title">
     <div class="business-details-heading"><span class="panel-icon">{icon('pin',28)}</span><div><span class="eyebrow">بيانات النشاط وطريقة تقديم الخدمة</span><h2 id="business-details-title">{esc(NAME)}</h2><p>خدمات سباكة وكهرباء وإنارة في موقع العميل داخل الرياض.</p></div></div>
-    <dl class="business-facts"><div><dt>الاتصال وواتساب</dt><dd><a href="tel:{PHONE}"><bdi dir="ltr">{PHONE}</bdi></a></dd></div><div><dt>نطاق الخدمة</dt><dd>مدينة الرياض، المملكة العربية السعودية</dd></div><div><dt>منطقة إدارة النشاط</dt><dd>{esc(BASE_AREA)}</dd></div><div><dt>طريقة تقديم الخدمة</dt><dd>زيارة موقع العميل بعد التنسيق</dd></div></dl>
+    <dl class="business-facts"><div><dt>الاتصال وواتساب</dt><dd><a href="tel:{PHONE}"><bdi dir="ltr">{PHONE}</bdi></a></dd></div><div><dt>نطاق الخدمة</dt><dd>مدينة الرياض، المملكة العربية السعودية</dd></div><div><dt>مقر إدارة النشاط</dt><dd><address>{esc(STREET_ADDRESS)}، {CITY} <bdi>{POSTAL_CODE}</bdi><br>الرقم الإضافي: <bdi>{ADDITIONAL_NUMBER}</bdi></address></dd></div><div><dt>العنوان الوطني المختصر</dt><dd><bdi dir="ltr">{SHORT_ADDRESS}</bdi></dd></div></dl>
     <p class="business-service-mode">{icon('check',20)}<span>{SERVICE_MODE}</span></p>
-    <a class="business-map-link" href="{wa_url()}" target="_blank" rel="noopener noreferrer">نسّق زيارة عبر واتساب {icon('arrow',17)}</a>
+    <a class="business-map-link" href="{esc(MAPS_URL)}" target="_blank" rel="noopener noreferrer">عرض عنوان مقر الإدارة على الخريطة {icon('arrow',17)}</a>
     </section>'''
 
 def footer_address():
-    return f'''<div class="footer-address"><strong>منطقة الإدارة · دون استقبال العملاء</strong><span>{esc(BASE_AREA)}</span><span>تنفيذ الخدمات في موقع العميل داخل الرياض.</span></div>'''
+    return f'''<div class="footer-address"><strong>مقر الإدارة · دون استقبال العملاء</strong><address>{esc(STREET_ADDRESS)}، {CITY} <bdi>{POSTAL_CODE}</bdi>، الرقم الإضافي <bdi>{ADDITIONAL_NUMBER}</bdi><br><bdi dir="ltr">{SHORT_ADDRESS}</bdi></address><span>تنفيذ الخدمات في موقع العميل داخل الرياض.</span></div>'''
 
 def head(title, description, path, extra_schema=None):
     url=canonical(path)

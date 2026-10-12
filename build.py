@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import html
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -14,6 +15,10 @@ PHONE = "0576879421"
 E164 = "+966576879421"
 WA = "https://wa.me/966576879421"
 GOOGLE_SITE_VERIFICATION = "KroRbLNToQQ_EEKCW_vcDeheVi0wmUlSOi8uiAHqGAU"
+BASE_AREA = "حي المصيف، الرياض"
+CITY = "الرياض"
+SERVICE_MODE = "ننتقل إلى مواقع العملاء داخل الرياض لتنفيذ الخدمة. مقر إدارة النشاط لا يستقبل العملاء."
+LAST_UPDATED = "2026-10-12"
 
 SERVICES = [
     dict(slug="leak-repair", category="plumbing", icon="drop", title="كشف وإصلاح تسربات المياه", short="تتبّع مصدر التهريب ومعالجة المواسير والوصلات والمحابس وفق حالة الموقع.",
@@ -117,6 +122,11 @@ def jsonld(obj):
 def canonical(path):
     return SITE + path
 
+def asset_url(path):
+    asset = OUT / path.lstrip("/")
+    version = hashlib.sha256(asset.read_bytes()).hexdigest()[:12]
+    return f"{path}?v={version}"
+
 def breadcrumbs(items):
     return '<nav class="breadcrumbs container" aria-label="مسار التنقل"><a href="/">الرئيسية</a>' + ''.join(icon("chevron", 15) + (f'<a href="{esc(url)}">{esc(label)}</a>' if url else f'<span aria-current="page">{esc(label)}</span>') for label, url in items) + '</nav>'
 
@@ -124,22 +134,75 @@ def breadcrumb_schema(items):
     chain = [("الرئيسية", "/")] + items
     return {"@type":"BreadcrumbList","@id":canonical(items[-1][1] or "/")+"#breadcrumbs","itemListElement":[{"@type":"ListItem","position":n+1,"name":label,"item":canonical(path) if path else canonical(items[-1][1] or "/")} for n,(label,path) in enumerate(chain)]}
 
+def service_area_schema():
+    return {"@type": "City", "name": CITY,
+            "containedInPlace": {"@type": "Country", "name": "المملكة العربية السعودية"}}
+
 def business_schema():
-    return {"@type":["LocalBusiness","Plumber"],"@id":SITE+"/#business","name":NAME,"url":SITE+"/","telephone":E164,"image":SITE+"/assets/team.webp","logo":SITE+"/assets/icon-180.png","description":"خدمات السباكة والكهرباء والإنارة داخل مدينة الرياض: إصلاح التسربات، صيانة الصرف والسخانات، تمديدات المياه، فحص الأعطال الكهربائية وتركيب الإنارة.","areaServed":{"@type":"City","name":"الرياض","containedInPlace":{"@type":"Country","name":"المملكة العربية السعودية"}},"contactPoint":{"@type":"ContactPoint","telephone":E164,"contactType":"خدمة العملاء","availableLanguage":"Arabic"},"hasOfferCatalog":{"@type":"OfferCatalog","name":"خدمات السباكة والكهرباء في الرياض","itemListElement":[{"@type":"OfferCatalog","name":CATEGORIES[c][0],"itemListElement":[{"@type":"Offer","itemOffered":{"@type":"Service","name":s["title"],"url":canonical("/services/"+s["slug"]+"/")}} for s in SERVICES if s["category"]==c]} for c in CATEGORIES]}}
+    return {
+        "@type": ["Plumber", "Electrician"],
+        "@id": SITE + "/#business",
+        "name": NAME,
+        "url": SITE + "/",
+        "telephone": E164,
+        "image": SITE + "/assets/team.webp",
+        "logo": SITE + "/assets/icon-180.png",
+        "description": "خدمات السباكة والكهرباء والإنارة في مواقع العملاء داخل الرياض، بإدارة من حي المصيف. " + SERVICE_MODE,
+        "address": {
+            "@type": "PostalAddress",
+            "addressLocality": CITY,
+            "addressRegion": "منطقة الرياض",
+            "addressCountry": "SA",
+        },
+        "areaServed": service_area_schema(),
+        "contactPoint": {
+            "@type": "ContactPoint", "telephone": E164,
+            "contactType": "طلب خدمات السباكة والكهرباء", "availableLanguage": "ar",
+            "areaServed": service_area_schema(), "url": canonical("/contact/"),
+        },
+        "hasOfferCatalog": {
+            "@type": "OfferCatalog", "name": "خدمات السباكة والكهرباء في الرياض",
+            "itemListElement": [
+                {"@type": "OfferCatalog", "name": CATEGORIES[c][0], "itemListElement": [
+                    {"@type": "Offer", "itemOffered": {
+                        "@type": "Service", "@id": canonical("/services/" + s["slug"] + "/") + "#service",
+                        "name": s["title"], "serviceType": s["title"],
+                        "url": canonical("/services/" + s["slug"] + "/"),
+                        "provider": {"@id": SITE + "/#business"}, "areaServed": service_area_schema(),
+                    }} for s in SERVICES if s["category"] == c
+                ]} for c in CATEGORIES
+            ],
+        },
+    }
+
+def business_details():
+    return f'''<section class="business-details" id="business-details" aria-labelledby="business-details-title">
+    <div class="business-details-heading"><span class="panel-icon">{icon('pin',28)}</span><div><span class="eyebrow">بيانات النشاط وطريقة تقديم الخدمة</span><h2 id="business-details-title">{esc(NAME)}</h2><p>خدمات سباكة وكهرباء وإنارة في موقع العميل داخل الرياض.</p></div></div>
+    <dl class="business-facts"><div><dt>الاتصال وواتساب</dt><dd><a href="tel:{PHONE}"><bdi dir="ltr">{PHONE}</bdi></a></dd></div><div><dt>نطاق الخدمة</dt><dd>مدينة الرياض، المملكة العربية السعودية</dd></div><div><dt>منطقة إدارة النشاط</dt><dd>{esc(BASE_AREA)}</dd></div><div><dt>طريقة تقديم الخدمة</dt><dd>زيارة موقع العميل بعد التنسيق</dd></div></dl>
+    <p class="business-service-mode">{icon('check',20)}<span>{SERVICE_MODE}</span></p>
+    <a class="business-map-link" href="{wa_url()}" target="_blank" rel="noopener noreferrer">نسّق زيارة عبر واتساب {icon('arrow',17)}</a>
+    </section>'''
+
+def footer_address():
+    return f'''<div class="footer-address"><strong>منطقة الإدارة · دون استقبال العملاء</strong><span>{esc(BASE_AREA)}</span><span>تنفيذ الخدمات في موقع العميل داخل الرياض.</span></div>'''
 
 def head(title, description, path, extra_schema=None):
     url=canonical(path)
     verification_tag = f'<meta name="google-site-verification" content="{esc(GOOGLE_SITE_VERIFICATION)}">' if path == "/" else ""
-    graph=[{"@type":"WebSite","@id":SITE+"/#website","name":NAME,"url":SITE+"/","inLanguage":"ar-SA","publisher":{"@id":SITE+"/#business"}},
-           {"@type":"WebPage","@id":url+"#webpage","url":url,"name":title,"description":description,"inLanguage":"ar-SA","isPartOf":{"@id":SITE+"/#website"},"about":{"@id":SITE+"/#business"}}]
-    if path=="/": graph.insert(0,business_schema())
+    page_type = {"/about/": "AboutPage", "/contact/": "ContactPage"}.get(path, "WebPage")
+    page_schema = {"@type":page_type,"@id":url+"#webpage","url":url,"name":title,"description":description,"inLanguage":"ar-SA","isPartOf":{"@id":SITE+"/#website"},"about":{"@id":SITE+"/#business"},"dateModified":LAST_UPDATED}
+    if path.startswith("/services/") and path != "/services/":
+        page_schema["mainEntity"] = {"@id": url + "#service"}
+    elif path in ("/about/", "/contact/"):
+        page_schema["mainEntity"] = {"@id": SITE + "/#business"}
+    graph=[business_schema(), {"@type":"WebSite","@id":SITE+"/#website","name":NAME,"url":SITE+"/","inLanguage":"ar-SA","publisher":{"@id":SITE+"/#business"}}, page_schema]
     if extra_schema: graph.extend(extra_schema if isinstance(extra_schema,list) else [extra_schema])
     return f'''<!doctype html><html lang="ar" dir="rtl"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#10282b"><meta name="color-scheme" content="light">{verification_tag}
 <title>{esc(title)}</title><meta name="description" content="{esc(description)}"><meta name="robots" content="index,follow,max-image-preview:large">
 <link rel="canonical" href="{esc(url)}"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png"><link rel="apple-touch-icon" href="/assets/icon-180.png">
 <meta property="og:type" content="website"><meta property="og:locale" content="ar_SA"><meta property="og:site_name" content="{NAME}"><meta property="og:title" content="{esc(title)}"><meta property="og:description" content="{esc(description)}"><meta property="og:url" content="{esc(url)}"><meta property="og:image" content="{SITE}/assets/og.jpg"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
-<meta name="twitter:card" content="summary_large_image"><link rel="stylesheet" href="/assets/style.css">{jsonld({'@context':'https://schema.org','@graph':graph})}</head><body><a class="skip" href="#main">انتقل إلى المحتوى</a>'''
+<meta name="twitter:card" content="summary_large_image"><link rel="stylesheet" href="{asset_url('/assets/style.css')}">{jsonld({'@context':'https://schema.org','@graph':graph})}</head><body><a class="skip" href="#main">انتقل إلى المحتوى</a>'''
 
 def header():
     return f'''<header class="site-header"><div class="container header-inner"><a class="brand" href="/" aria-label="{NAME}، الرئيسية"><img src="/assets/icon-180.png" width="48" height="48" alt="" fetchpriority="high"><span><strong>أبو محمد</strong><small>سباك وكهربائي · الرياض</small></span></a>
@@ -150,9 +213,9 @@ def header():
 def footer():
     plist=''.join(f'<li><a href="/services/{s["slug"]}/">{esc(s["title"])}</a></li>' for s in SERVICES[:6])
     elist=''.join(f'<li><a href="/services/{s["slug"]}/">{esc(s["title"])}</a></li>' for s in SERVICES[6:])
-    return f'''<footer class="footer"><div class="container"><div class="footer-grid"><div class="footer-about"><a class="brand brand-footer" href="/"><img src="/assets/icon-180.png" width="52" height="52" alt=""><span><strong>أبو محمد</strong><small>سباك وكهربائي · الرياض</small></span></a><p>سباكة، كهرباء وإنارة للمنازل داخل مدينة الرياض. أرسل تفاصيل المشكلة أو اتصل للتنسيق على الخدمة المناسبة.</p><span class="footer-location">{icon('pin',18)} نطاق الخدمة: مدينة الرياض</span></div><div><h2>السباكة</h2><ul>{plist}</ul></div><div><h2>الكهرباء والإنارة</h2><ul>{elist}</ul></div><div><h2>روابط وتواصل</h2><ul><li><a href="/services/">جميع الخدمات</a></li><li><a href="/about/">من نحن</a></li><li><a href="/contact/">تواصل معنا</a></li><li><a href="tel:{PHONE}" dir="ltr">{PHONE}</a></li></ul></div></div><div class="footer-bottom"><span>© 2026 {NAME}</span><div class="credit"><span>Designed &amp; developed by <a href="https://www.eslam-elshikh.com/" target="_blank" rel="noopener noreferrer">Eng. Eslam Elshikh</a></span><a href="https://www.eslam-elshikh.com/" target="_blank" rel="noopener noreferrer">المهندس إسلام الشيخ</a></div></div></div></footer>
+    return f'''<footer class="footer"><div class="container"><div class="footer-grid"><div class="footer-about"><a class="brand brand-footer" href="/"><img src="/assets/icon-180.png" width="52" height="52" alt=""><span><strong>أبو محمد</strong><small>سباك وكهربائي · الرياض</small></span></a><p>سباكة، كهرباء وإنارة للمنازل داخل مدينة الرياض. أرسل تفاصيل المشكلة أو اتصل للتنسيق على الخدمة المناسبة.</p><span class="footer-location">{icon('pin',18)} نطاق الخدمة: مدينة الرياض</span>{footer_address()}</div><div><h2>السباكة</h2><ul>{plist}</ul></div><div><h2>الكهرباء والإنارة</h2><ul>{elist}</ul></div><div><h2>روابط وتواصل</h2><ul><li><a href="/services/">جميع الخدمات</a></li><li><a href="/about/">من نحن</a></li><li><a href="/contact/">تواصل معنا</a></li><li><a href="tel:{PHONE}" dir="ltr">{PHONE}</a></li></ul></div></div><div class="footer-bottom"><span>© 2026 {NAME}</span><div class="credit"><span>Designed &amp; developed by <a href="https://www.eslam-elshikh.com/" target="_blank" rel="noopener noreferrer">Eng. Eslam Elshikh</a></span><a href="https://www.eslam-elshikh.com/" target="_blank" rel="noopener noreferrer">المهندس إسلام الشيخ</a></div></div></div></footer>
     <aside class="floating-contact" aria-label="تواصل سريع"><a class="float-wa" href="{wa_url()}" target="_blank" rel="noopener noreferrer" aria-label="راسل أبو محمد على واتساب"><svg width="27" height="27" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><use href="/assets/whatsapp.svg#wa"/></svg><span class="float-label">واتساب</span></a><a class="float-phone" href="tel:{PHONE}" aria-label="اتصل بأبو محمد على {PHONE}">{icon('phone',25)}<span class="float-label">اتصل الآن</span></a></aside>
-    <script src="/assets/site.js" defer></script></body></html>'''
+    <script src="{asset_url('/assets/site.js')}" defer></script></body></html>'''
 
 def ctas(service=None, inverse=False):
     msg = f"مرحبًا أبو محمد، أرغب في خدمة {service} داخل الرياض. الحي: ... وتفاصيل الطلب: ..." if service else "مرحبًا أبو محمد، أرغب في طلب خدمة سباكة أو كهرباء داخل الرياض. الحي: ... وتفاصيل الطلب: ..."
@@ -170,15 +233,16 @@ def section_heading(eyebrow,title,subtitle=""):
 
 def home():
     title="أبو محمد سباك وكهربائي بالرياض | سباكة وكهرباء وإنارة"
-    desc="أبو محمد سباك وكهربائي في الرياض لخدمات إصلاح تسربات المياه، تسليك المجاري، صيانة السخانات، الأعطال الكهربائية وتركيب الإنارة. اتصال وواتساب: 0576879421."
+    desc=f"{NAME} لخدمات السباكة والكهرباء والإنارة في مواقع العملاء داخل الرياض. إدارة النشاط من حي المصيف دون استقبال العملاء. اتصال وواتساب: {PHONE}."
     featured=[SERVICES[i] for i in [0,1,2,3,6,7,8,9]]
     cards=''.join(service_card(s) for s in featured)
-    faq=[("ما نطاق خدمة أبو محمد؟","نخدم العملاء داخل مدينة الرياض. أرسل اسم الحي وطبيعة الطلب عبر واتساب لتنسيق التفاصيل."),("هل يمكن إرسال صورة للعطل قبل الزيارة؟","نعم، يمكنك إرسال صورة أو شرح مختصر للمشكلة والحي عبر واتساب حتى تتضح الخدمة المطلوبة."),("هل يشمل العمل السباكة والكهرباء؟","نعم، يقدم أبو محمد خدمات سباكة وكهرباء وإنارة؛ وتشمل الأعمال الموضحة في صفحات الخدمات أعمال الإصلاح والصيانة والتركيب بحسب الحالة."),("كيف تُحدد تكلفة الخدمة؟","تختلف التكلفة بحسب نوع العمل والقطع المطلوبة وحالة الموقع، ويمكن مناقشة التفاصيل بعد وصف المشكلة أو معاينتها.")]
+    faq=[("ما نطاق خدمة أبو محمد؟","نخدم العملاء داخل مدينة الرياض. أرسل اسم الحي وطبيعة الطلب عبر واتساب لتنسيق التفاصيل."),("هل تستقبلون العملاء في مقر الإدارة؟",SERVICE_MODE),("هل يمكن إرسال صورة للعطل قبل الزيارة؟","نعم، يمكنك إرسال صورة أو شرح مختصر للمشكلة والحي عبر واتساب حتى تتضح الخدمة المطلوبة."),("هل يشمل العمل السباكة والكهرباء؟","نعم، يقدم أبو محمد خدمات سباكة وكهرباء وإنارة؛ وتشمل الأعمال الموضحة في صفحات الخدمات أعمال الإصلاح والصيانة والتركيب بحسب الحالة."),("كيف تُحدد تكلفة الخدمة؟","تختلف التكلفة بحسب نوع العمل والقطع المطلوبة وحالة الموقع، ويمكن مناقشة التفاصيل بعد وصف المشكلة أو معاينتها.")]
     faq_html=''.join(f'<details><summary>{esc(q)}</summary><p>{esc(a)}</p></details>' for q,a in faq)
     content=f'''<main id="main"><section class="hero"><div class="container hero-grid"><div class="hero-copy"><span class="eyebrow hero-eyebrow"><span class="dot"></span> خدمة داخل مدينة الرياض</span><h1>أبو محمد سباك وكهربائي بالرياض.<br><em>سباكة وإنارة</em> تريح بالك.</h1><p class="hero-lead">مع أبو محمد، اطلب خدمة السباكة أو الكهرباء اللي تحتاجها في منزلك: من تسربات المياه والصرف والسخانات إلى الأعطال الكهربائية وتركيب الإنارة.</p>{ctas()}<div class="hero-micro">{icon('pin',17)} نخدم داخل الرياض <span aria-hidden="true">·</span> <span dir="ltr">{PHONE}</span></div></div><div class="hero-visual"><div class="hero-orbit orbit-one"></div><div class="hero-orbit orbit-two"></div><div class="hero-pill pill-water">{icon('drop',18)} سباكة</div><div class="hero-pill pill-power">{icon('bolt',18)} كهرباء</div><img src="/assets/team.webp" width="760" height="760" alt="أفاتار ثلاثي الأبعاد لسباك وكهربائي يمثلان خدمات أبو محمد" fetchpriority="high"></div></div><div class="hero-bottom container"><span>صيانة وتركيب حسب احتياج منزلك</span><a href="#services">تعرّف على الخدمات <span aria-hidden="true">↓</span></a></div></section>
     <section class="section intro-section"><div class="container intro-grid"><div>{section_heading('ماذا نقدم؟','خدمات البيت من الماء إلى النور','نبدأ بفهم المشكلة ثم نحدد الخدمة المناسبة لها. اختر نوع العمل واطّلع على تفاصيله قبل التواصل.')}</div><div class="intro-side"><a class="category-tile tile-water" href="/plumbing/"><span class="category-symbol">{icon('drop',36)}</span><span><strong>خدمات السباكة</strong><small>المياه · الصرف · السخانات</small></span>{icon('arrow',20)}</a><a class="category-tile tile-power" href="/electrical/"><span class="category-symbol">{icon('bolt',36)}</span><span><strong>الكهرباء والإنارة</strong><small>الأعطال · التمديدات · الإضاءة</small></span>{icon('arrow',20)}</a></div></div></section>
     <section class="section services-section" id="services"><div class="container">{section_heading('الخدمات الأكثر طلبًا','اختر الخدمة المناسبة','كل بطاقة تفتح صفحة مستقلة فيها نطاق العمل والحالات المناسبة وطريقة طلب الخدمة.')}<div class="cards-grid">{cards}</div><a class="text-link" href="/services/">استعرض جميع الخدمات {icon('arrow',19)}</a></div></section>
     <section class="section process-section"><div class="container process-grid"><div>{section_heading('من أول رسالة إلى التنفيذ','خطوات واضحة من البداية')}<p>صف العطل وموقعه داخل الرياض. تساعدنا صورة أو تفاصيل بسيطة على فهم طلبك، ثم نتفق على خطوات المعاينة أو العمل المناسب بحسب الحالة.</p>{ctas()}</div><ol class="process-list"><li><span>01</span><div><strong>أرسل التفاصيل</strong><p>نوع المشكلة، الحي، وصورة إن توفرت.</p></div></li><li><span>02</span><div><strong>نحدد المطلوب</strong><p>نوضح نطاق الخدمة والاحتياجات قبل البدء.</p></div></li><li><span>03</span><div><strong>تنفيذ وفحص</strong><p>تنفيذ العمل ثم مراجعة التشغيل في الجزء المعالج.</p></div></li></ol></div></section>
+    <section class="section business-section"><div class="container">{business_details()}</div></section>
     <section class="section faq-section"><div class="container faq-grid"><div>{section_heading('أسئلة شائعة','إجابات قبل ما تتواصل')}<p>إذا احتجت تفاصيل عن حالتك تحديدًا، أرسل لنا وصفًا مختصرًا على واتساب.</p></div><div class="faq-list">{faq_html}</div></div></section>{contact_band()}</main>'''
     return head(title,desc,"/")+header()+content+footer()
 
@@ -194,7 +258,7 @@ def service_page(s):
     content=f'''<main id="main">{breadcrumbs([('كل الخدمات','/services/'),(s['title'],None)])}<section class="inner-hero"><div class="container inner-grid"><div><span class="eyebrow">{cat[0]} · مدينة الرياض</span><h1>{esc(s['title'])} <span>بالرياض</span></h1><p>{esc(s['intro'])}</p>{ctas(s['title'])}</div><div class="inner-art {s['category']}"><span class="inner-art-circle">{icon(s['icon'],105)}</span><span class="art-caption">{cat[2]}</span></div></div></section>
     <section class="section content-section"><div class="container content-grid"><article><span class="eyebrow">تفاصيل الخدمة</span><h2>حل يناسب حالة الموقع</h2><p>{esc(s['detail'])}</p><h2>متى تطلب هذه الخدمة؟</h2><p>إذا لاحظت إحدى الحالات التالية، يساعد وصف المشكلة والصور المتاحة على فهم الاحتياج قبل تحديد العمل المناسب:</p><ul class="case-list">{''.join(f'<li>{icon("check",18)} {esc(c)}</li>' for c in s['cases'])}</ul><h2>ما الذي تشمل عليه الخدمة؟</h2><div class="scope-grid">{''.join(f'<div>{icon("check",20)}<span>{esc(a)}</span></div>' for a in s['includes'])}</div><p class="note">تختلف تفاصيل التنفيذ والقطع المطلوبة بحسب الحالة الفعلية في الموقع. نناقش نطاق العمل المناسب قبل البدء.</p></article><aside class="side-panel"><span class="side-icon">{icon(s['icon'],33)}</span><h2>تحتاج {esc(s['title'])}؟</h2><p>أرسل شرحًا مختصرًا للعطل واسم الحي في الرياض، أو اتصل مباشرة.</p>{ctas(s['title'])}<small>{icon('pin',16)} نطاق الخدمة: مدينة الرياض</small></aside></div></section>
     <section class="section related-section"><div class="container">{section_heading('قد يفيدك أيضًا','خدمات مرتبطة')}<div class="cards-grid related-grid">{related_cards}</div><a class="text-link" href="/{s['category']}/">كل {cat[0]} {icon('arrow',19)}</a></div></section>{contact_band()}</main>'''
-    schema=[breadcrumb_schema([('كل الخدمات','/services/'),(s['title'],path)]),{"@type":"Service","@id":canonical(path)+"#service","name":s['title'],"description":s['intro'],"serviceType":s['title'],"areaServed":{"@type":"City","name":"الرياض"},"provider":{"@id":SITE+"/#business"},"url":canonical(path)}]
+    schema=[breadcrumb_schema([('كل الخدمات','/services/'),(s['title'],path)]),{"@type":"Service","@id":canonical(path)+"#service","name":s['title'],"description":s['intro'],"serviceType":s['title'],"areaServed":service_area_schema(),"provider":{"@id":SITE+"/#business"},"url":canonical(path)}]
     return head(title,desc,path,schema)+header()+content+footer()
 
 def listing_page(category=None):
@@ -212,12 +276,12 @@ def listing_page(category=None):
 
 def simple_page(kind):
     if kind=="about":
-        title=f"من نحن | {NAME} بالرياض"; desc="تعرّف على أبو محمد سباك وكهربائي لخدمات السباكة والكهرباء والإنارة داخل الرياض، وطريقة التواصل واختيار الخدمة المناسبة."; path="/about/"
+        title=f"من نحن | {NAME} بالرياض"; desc=f"تعرّف على {NAME}: خدمات سباكة وكهرباء وإنارة في مواقع العملاء داخل الرياض، بإدارة من حي المصيف دون استقبال العملاء في المقر."; path="/about/"
         body=f'''<span class="eyebrow">عن أبو محمد</span><h1>شغل البيت يبدأ من <span>تشخيص المشكلة</span></h1><p class="simple-lead">أبو محمد سباك وكهربائي يقدم خدمات السباكة والكهرباء والإنارة داخل مدينة الرياض. الموقع يساعدك تختار نوع العمل، وتعرف ما يشمله، وتتواصل مباشرة لوصف حالتك.</p><div class="simple-panels"><div><span class="panel-icon">{icon('drop',28)}</span><h2>السباكة</h2><p>من تسربات المياه والصرف والسخانات إلى صيانة التركيبات وتمديدات المياه المنزلية.</p><a href="/plumbing/">تصفح خدمات السباكة {icon('arrow',17)}</a></div><div><span class="panel-icon amber">{icon('bolt',28)}</span><h2>الكهرباء والإنارة</h2><p>فحص الأعطال والقواطع، وتجهيز النقاط الكهربائية، وتركيب الإنارة وصيانتها.</p><a href="/electrical/">تصفح خدمات الكهرباء {icon('arrow',17)}</a></div></div><h2>طريقة طلب الخدمة</h2><p>أخبرنا بنوع المشكلة والحي داخل الرياض. وإذا كان عندك صورة للمكان أو القطعة، أرسلها على واتساب حتى تكون التفاصيل أوضح. يتم تحديد نطاق العمل والقطع اللازمة بحسب الحالة قبل التنفيذ.</p>{ctas()}'''
     else:
-        title=f"تواصل معنا | {NAME} بالرياض"; desc=f"تواصل مع {NAME} لطلب خدمة سباكة أو كهرباء أو إنارة داخل مدينة الرياض. اتصل أو أرسل واتساب على {PHONE}."; path="/contact/"
+        title=f"تواصل معنا | {NAME} بالرياض"; desc=f"بيانات {NAME} ومقر إدارة النشاط في حي المصيف بالرياض. الخدمة في موقع العميل دون استقبال في المقر. اتصال وواتساب: {PHONE}."; path="/contact/"
         body=f'''<span class="eyebrow">تواصل معنا</span><h1>احكِ لنا عن المشكلة، <span>ونبدأ من التفاصيل</span></h1><p class="simple-lead">إذا تحتاج سباكًا أو كهربائيًا داخل الرياض، اتصل مباشرة أو أرسل رسالة على واتساب فيها نوع الخدمة والحي وصورة إن توفرت.</p><div class="contact-choices"><a href="tel:{PHONE}" class="contact-choice">{icon('phone',29)}<span><small>رقم الاتصال</small><strong dir="ltr">{PHONE}</strong></span>{icon('arrow',21)}</a><a href="{wa_url()}" target="_blank" rel="noopener noreferrer" class="contact-choice wa-choice"><svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><use href="/assets/whatsapp.svg#wa"/></svg><span><small>واتساب مباشر</small><strong dir="ltr">{PHONE}</strong></span>{icon('arrow',21)}</a></div><div class="contact-hint">{icon('pin',22)}<span><strong>نطاق الخدمة</strong>مدينة الرياض، المملكة العربية السعودية</span></div><h2>ماذا تذكر في رسالتك؟</h2><p>اذكر نوع العطل، الحي، وقت ملاحظتك للمشكلة، وهل توجد صورة أو فيديو قصير يوضحها. هذه التفاصيل تساعد على معرفة نوع الخدمة المطلوبة، لكن تحديد العمل والتكلفة النهائية يعتمد على حالة الموقع.</p><a class="text-link" href="/services/">استعرض الخدمات {icon('arrow',19)}</a>'''
-    content=f'<main id="main">{breadcrumbs([("من نحن" if kind=="about" else "تواصل معنا",None)])}<section class="simple-hero"><div class="container simple-content">{body}</div></section>{contact_band()}</main>'
+    content=f'<main id="main">{breadcrumbs([("من نحن" if kind=="about" else "تواصل معنا",None)])}<section class="simple-hero"><div class="container simple-content">{body}{business_details()}</div></section>{contact_band()}</main>'
     return head(title,desc,path,breadcrumb_schema([("من نحن" if kind=="about" else "تواصل معنا",path)]))+header()+content+footer()
 
 def write(path,content):
@@ -237,7 +301,7 @@ def main():
         write(Path(kind)/"index.html",simple_page(kind))
     paths=["/","/services/","/plumbing/","/electrical/","/about/","/contact/"]+[f'/services/{s["slug"]}/' for s in SERVICES]
     write(Path("robots.txt"),f"User-agent: *\nAllow: /\nSitemap: {SITE}/sitemap.xml\n")
-    write(Path("sitemap.xml"),'<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'+''.join(f'<url><loc>{canonical(p)}</loc></url>\n' for p in paths)+'</urlset>\n')
+    write(Path("sitemap.xml"),'<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'+''.join(f'<url><loc>{canonical(p)}</loc><lastmod>{LAST_UPDATED}</lastmod></url>\n' for p in paths)+'</urlset>\n')
     print(f"Built {len(paths)} pages for {SITE}")
 
 if __name__=="__main__":

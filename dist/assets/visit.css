@@ -1,0 +1,40 @@
+#visit-request:not([hidden]) {
+  display: grid;
+  gap: .65rem;
+  max-width: 39rem;
+  margin-block: 1.5rem;
+}
+#visit-request label {
+  font-weight: 700;
+}
+#visit-request small {
+  color: var(--muted);
+  font-weight: 400;
+}
+#visit-request input,
+#visit-request select,
+#visit-request textarea {
+  width: 100%;
+  min-width: 0;
+  margin-bottom: .55rem;
+  padding: .75rem .9rem;
+  border: 1px solid #9bb3b0;
+  border-radius: .65rem;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 1rem;
+}
+#visit-request textarea {
+  resize: vertical;
+}
+#visit-request :focus-visible {
+  outline: 3px solid var(--teal);
+  outline-offset: 2px;
+}
+#visit-request button {
+  justify-self: start;
+  border: 0;
+  font-family: inherit;
+  cursor: pointer;
+}

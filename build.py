@@ -205,7 +205,8 @@ def business_details():
 def footer_address():
     return f'''<div class="footer-address"><strong>مقر استقبال العملاء في النرجس</strong><address>{esc(RECEPTION_ADDRESS)}</address><a href="{esc(MAPS_URL)}" target="_blank" rel="noopener noreferrer">عرض مقر النرجس على الخريطة</a></div>'''
 
-def head(title, description, path, extra_schema=None):
+def head(title, description, path, extra_schema=None, stylesheet=None):
+    page_styles = f'<link rel="stylesheet" href="{asset_url(stylesheet)}">' if stylesheet else ""
     url=canonical(path)
     verification_tag = f'<meta name="google-site-verification" content="{esc(GOOGLE_SITE_VERIFICATION)}">' if path == "/" else ""
     page_type = {"/about/": "AboutPage", "/contact/": "ContactPage"}.get(path, "WebPage")
@@ -221,7 +222,7 @@ def head(title, description, path, extra_schema=None):
 <title>{esc(title)}</title><meta name="description" content="{esc(description)}"><meta name="robots" content="index,follow,max-image-preview:large">
 <link rel="canonical" href="{esc(url)}"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png"><link rel="apple-touch-icon" href="/assets/icon-180.png">
 <meta property="og:type" content="website"><meta property="og:locale" content="ar_SA"><meta property="og:site_name" content="{NAME}"><meta property="og:title" content="{esc(title)}"><meta property="og:description" content="{esc(description)}"><meta property="og:url" content="{esc(url)}"><meta property="og:image" content="{SITE}/assets/og.jpg"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
-<meta name="twitter:card" content="summary_large_image"><link rel="stylesheet" href="{asset_url('/assets/style.css')}">{jsonld({'@context':'https://schema.org','@graph':graph})}{DEVELOPER_HEAD}</head><body><a class="skip" href="#main">انتقل إلى المحتوى</a>'''
+<meta name="twitter:card" content="summary_large_image"><link rel="stylesheet" href="{asset_url('/assets/style.css')}">{page_styles}{jsonld({'@context':'https://schema.org','@graph':graph})}{DEVELOPER_HEAD}</head><body><a class="skip" href="#main">انتقل إلى المحتوى</a>'''
 
 def header():
     return f'''<header class="site-header"><div class="container header-inner"><a class="brand" href="/" aria-label="{NAME}، الرئيسية"><img src="/assets/icon-180.png" width="48" height="48" alt="" fetchpriority="high"><span><strong>أبو محمد</strong><small>سباك وكهربائي · الرياض</small></span></a>
@@ -303,9 +304,38 @@ def simple_page(kind):
         body=f'''<span class="eyebrow">عن أبو محمد</span><h1>شغل البيت يبدأ من <span>تشخيص المشكلة</span></h1><p class="simple-lead">أبو محمد سباك وكهربائي يقدم خدمات السباكة والكهرباء والإنارة داخل مدينة الرياض. الموقع يساعدك تختار نوع العمل، وتعرف ما يشمله، وتتواصل مباشرة لوصف حالتك.</p><div class="simple-panels"><div><span class="panel-icon">{icon('drop',28)}</span><h2>السباكة</h2><p>من تسربات المياه والصرف والسخانات إلى صيانة التركيبات وتمديدات المياه المنزلية.</p><a href="/plumbing/">تصفح خدمات السباكة {icon('arrow',17)}</a></div><div><span class="panel-icon amber">{icon('bolt',28)}</span><h2>الكهرباء والإنارة</h2><p>فحص الأعطال والقواطع، وتجهيز النقاط الكهربائية، وتركيب الإنارة وصيانتها.</p><a href="/electrical/">تصفح خدمات الكهرباء {icon('arrow',17)}</a></div></div><h2>طريقة طلب الخدمة</h2><p>أخبرنا بنوع المشكلة والحي داخل الرياض. وإذا كان عندك صورة للمكان أو القطعة، أرسلها على واتساب حتى تكون التفاصيل أوضح. يتم تحديد نطاق العمل والقطع اللازمة بحسب الحالة قبل التنفيذ.</p>{ctas()}'''
     else:
         title=f"تواصل معنا | {NAME} بالرياض"; desc=f"عنوان استقبال عملاء {NAME} في حي النرجس بالرياض وخريطة الوصول. لتنسيق زيارة منزلية اتصل أو راسلنا على واتساب {PHONE}."; path="/contact/"
-        body=f'''<span class="eyebrow">تواصل معنا</span><h1>احكِ لنا عن المشكلة، <span>ونبدأ من التفاصيل</span></h1><p class="simple-lead">إذا تحتاج سباكًا أو كهربائيًا داخل الرياض، اتصل مباشرة أو أرسل رسالة على واتساب فيها نوع الخدمة والحي وصورة إن توفرت.</p><div class="contact-choices"><a href="tel:{PHONE}" class="contact-choice">{icon('phone',29)}<span><small>رقم الاتصال</small><strong dir="ltr">{PHONE}</strong></span>{icon('arrow',21)}</a><a href="{wa_url()}" target="_blank" rel="noopener noreferrer" class="contact-choice wa-choice"><svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><use href="/assets/whatsapp.svg#wa"/></svg><span><small>واتساب مباشر</small><strong dir="ltr">{PHONE}</strong></span>{icon('arrow',21)}</a></div><div class="contact-hint">{icon('pin',22)}<span><strong>زورنا في حي النرجس</strong><a href="{esc(MAPS_URL)}" target="_blank" rel="noopener noreferrer">{esc(RECEPTION_STREET)} · عرض الخريطة</a></span></div><h2>ماذا تذكر في رسالتك؟</h2><p>اذكر نوع العطل، الحي، وقت ملاحظتك للمشكلة، وهل توجد صورة أو فيديو قصير يوضحها. هذه التفاصيل تساعد على معرفة نوع الخدمة المطلوبة، لكن تحديد العمل والتكلفة النهائية يعتمد على حالة الموقع.</p><a class="text-link" href="/services/">استعرض الخدمات {icon('arrow',19)}</a>'''
+        body=f'''<span class="eyebrow">تواصل معنا</span><h1>احكِ لنا عن المشكلة، <span>ونبدأ من التفاصيل</span></h1><p class="simple-lead">إذا تحتاج سباكًا أو كهربائيًا داخل الرياض، اتصل مباشرة أو أرسل رسالة على واتساب فيها نوع الخدمة والحي وصورة إن توفرت.</p><p><a class="btn btn-primary" href="/visit/">نسّق زيارة منزلية</a></p><div class="contact-choices"><a href="tel:{PHONE}" class="contact-choice">{icon('phone',29)}<span><small>رقم الاتصال</small><strong dir="ltr">{PHONE}</strong></span>{icon('arrow',21)}</a><a href="{wa_url()}" target="_blank" rel="noopener noreferrer" class="contact-choice wa-choice"><svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><use href="/assets/whatsapp.svg#wa"/></svg><span><small>واتساب مباشر</small><strong dir="ltr">{PHONE}</strong></span>{icon('arrow',21)}</a></div><div class="contact-hint">{icon('pin',22)}<span><strong>زورنا في حي النرجس</strong><a href="{esc(MAPS_URL)}" target="_blank" rel="noopener noreferrer">{esc(RECEPTION_STREET)} · عرض الخريطة</a></span></div><h2>ماذا تذكر في رسالتك؟</h2><p>اذكر نوع العطل، الحي، وقت ملاحظتك للمشكلة، وهل توجد صورة أو فيديو قصير يوضحها. هذه التفاصيل تساعد على معرفة نوع الخدمة المطلوبة، لكن تحديد العمل والتكلفة النهائية يعتمد على حالة الموقع.</p><a class="text-link" href="/services/">استعرض الخدمات {icon('arrow',19)}</a>'''
     content=f'<main id="main">{breadcrumbs([("من نحن" if kind=="about" else "تواصل معنا",None)])}<section class="simple-hero"><div class="container simple-content">{body}{business_details()}</div></section>{contact_band()}</main>'
     return head(title,desc,path,breadcrumb_schema([("من نحن" if kind=="about" else "تواصل معنا",path)]))+header()+content+footer()
+
+def visit_page():
+    path = "/visit/"
+    title = f"تنسيق زيارة منزلية في الرياض | {NAME}"
+    description = "اختر خدمة السباكة أو الكهرباء واكتب الحي والوقت الذي يناسبك، ثم أرسل طلب الزيارة إلى أبو محمد على واتساب."
+    option_groups = []
+    for category, labels in CATEGORIES.items():
+        options = "".join(f'<option>{esc(service["title"])}</option>' for service in SERVICES if service["category"] == category)
+        option_groups.append(f'<optgroup label="{esc(labels[0])}">{options}</optgroup>')
+    form = f'''<main id="main">{breadcrumbs([("تواصل معنا","/contact/"),("تنسيق زيارة منزلية",None)])}
+    <section class="simple-hero"><div class="container simple-content">
+    <h1>نسّق زيارة منزلية مع <span>أبو محمد</span></h1>
+    <p class="simple-lead">اختر الخدمة واكتب حيّك والوقت اللي يناسبك. تفتح لك رسالة جاهزة على واتساب، وبعد إرسالها يرد عليك أبو محمد لتأكيد الموعد.</p>
+    <form id="visit-request" data-whatsapp="{esc(WA)}" hidden>
+      <label for="visit-service">الخدمة المطلوبة</label>
+      <select id="visit-service" name="service" required><option value="">اختر الخدمة</option>{"".join(option_groups)}<option>عدة أعمال سباكة وكهرباء</option><option>خدمة أخرى</option></select>
+      <label for="visit-district">الحي داخل الرياض</label>
+      <input id="visit-district" name="district" maxlength="90" placeholder="مثلاً النرجس" required>
+      <label for="visit-time">الوقت المفضّل <small>(اختياري)</small></label>
+      <input id="visit-time" name="preferredTime" maxlength="100" placeholder="مثلاً الخميس بعد العصر">
+      <label for="visit-details">تفاصيل الطلب <small>(اختياري)</small></label>
+      <textarea id="visit-details" name="details" rows="2" maxlength="450" placeholder="مثلاً تركيب ثريا فوق طاولة الطعام"></textarea>
+      <button class="btn btn-primary" type="submit">{wa_icon(21)} افتح الطلب في واتساب</button>
+    </form>
+    <p id="visit-fallback"><a class="btn btn-primary" href="{wa_url("هلا أبو محمد، أحتاج تنسيق زيارة منزلية داخل الرياض.")}">راسل أبو محمد على واتساب</a></p>
+    <p>تفضّل تتصل؟ <a class="text-link" href="tel:{PHONE}"><bdi dir="ltr">{PHONE}</bdi></a></p>
+    </div></section></main><script src="{asset_url('/assets/visit.js')}" defer></script>'''
+    schema = breadcrumb_schema([("تواصل معنا", "/contact/"), ("تنسيق زيارة منزلية", path)])
+    return head(title, description, path, schema, "/assets/visit.css") + header() + form + footer()
 
 def write(path,content):
     dest=OUT/path
@@ -322,7 +352,8 @@ def main():
         write(Path("services")/s["slug"]/"index.html",service_page(s))
     for kind in ("about","contact"):
         write(Path(kind)/"index.html",simple_page(kind))
-    paths=["/","/services/","/plumbing/","/electrical/","/about/","/contact/"]+[f'/services/{s["slug"]}/' for s in SERVICES]
+    write(Path("visit/index.html"),visit_page())
+    paths=["/","/services/","/plumbing/","/electrical/","/about/","/contact/","/visit/"]+[f'/services/{s["slug"]}/' for s in SERVICES]
     write(Path("robots.txt"),f"User-agent: *\nAllow: /\nSitemap: {SITE}/sitemap.xml\n")
     write(Path("sitemap.xml"),'<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'+''.join(f'<url><loc>{canonical(p)}</loc><lastmod>{LAST_UPDATED}</lastmod></url>\n' for p in paths)+'</urlset>\n')
     print(f"Built {len(paths)} pages for {SITE}")
